@@ -9,6 +9,7 @@ class AgentRequest(BaseModel):
     query: str
     hcp_id: str | None = None
     session_id: str = "default_session"
+    context: dict | None = None
 
 
 class AgentResponse(BaseModel):
@@ -22,7 +23,8 @@ async def chat_with_agent(payload: AgentRequest):
     response_text = run_agent(
         query=payload.query, 
         session_id=payload.session_id, 
-        hcp_id=payload.hcp_id
+        hcp_id=payload.hcp_id,
+        context=payload.context
     )
     
     return AgentResponse(

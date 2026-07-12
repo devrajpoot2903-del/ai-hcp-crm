@@ -7,3 +7,4 @@ class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
     # We can add more state tracking here if needed, like current_hcp_id
     current_hcp_id: str | None
+    current_context: dict | None

@@ -5,16 +5,20 @@ from app.langgraph.graph import graph
 # In a real app, use checkpointer (like MemorySaver or PostgresSaver)
 _conversation_states = {}
 
-def run_agent(query: str, session_id: str = "default_session", hcp_id: str | None = None) -> str:
+def run_agent(query: str, session_id: str = "default_session", hcp_id: str | None = None, context: dict | None = None) -> str:
     """Run the agent for a given query, maintaining conversation state per session."""
     if session_id not in _conversation_states:
-        _conversation_states[session_id] = {"messages": [], "current_hcp_id": hcp_id}
+        _conversation_states[session_id] = {"messages": [], "current_hcp_id": hcp_id, "current_context": context}
         
     state = _conversation_states[session_id]
     
     # Update HCP ID if provided
     if hcp_id:
         state["current_hcp_id"] = hcp_id
+        
+    # Always update context if provided, so the agent has the latest UI state
+    if context:
+        state["current_context"] = context
         
     # Add the new human message
     state["messages"].append(HumanMessage(content=query))

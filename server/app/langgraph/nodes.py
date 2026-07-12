@@ -24,10 +24,20 @@ def agent_node(state: AgentState):
     """The agent node that invokes the LLM."""
     messages = state["messages"]
     
+    # Build contextual system prompt
+    current_prompt = SYSTEM_PROMPT
+    context = state.get("current_context")
+    if context:
+        import json
+        context_str = json.dumps(context, indent=2)
+        current_prompt += f"\n\n--- CURRENT CRM CONTEXT ---\n{context_str}\n---------------------------\n"
 
     # Ensure system prompt is present
     if not messages or not isinstance(messages[0], SystemMessage):
-        messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
+        messages = [SystemMessage(content=current_prompt)] + messages
+    else:
+        # Update the existing system message with the latest context
+        messages[0] = SystemMessage(content=current_prompt)
 
     # Validate API key
     groq_key = settings.GROQ_API_KEY

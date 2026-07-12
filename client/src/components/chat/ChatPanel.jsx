@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { BotIcon, SendIcon, SparklesIcon, XIcon, RefreshIcon } from '../ui/Icons'
 import { Spinner } from '../ui/Loader'
 import aiAPI from '../../services/api/aiAPI'
+import useAppSelector from '../../hooks/useAppSelector'
 
 const SUGGESTIONS = [
   { id: 'summarize',    label: '✦ Summarize Interaction',   prompt: 'Please summarize this interaction for me.'                  },
@@ -58,6 +59,9 @@ export default function ChatPanel() {
   const bottomRef               = useRef(null)
   const inputRef                = useRef(null)
 
+  // Pull CRM Context from Redux
+  const { formData, hcpList, selectedInteraction } = useAppSelector(s => s.interaction)
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -78,8 +82,21 @@ export default function ChatPanel() {
     console.log('[ChatPanel] ENTER sendMessage — query:', msg)
 
     try {
+      // Construct context object to send to backend
+      const hcpDetails = hcpList.find(h => h.id === formData.hcpId) || null
+      const contextPayload = {
+        selectedHCP: hcpDetails,
+        interactionForm: formData,
+        selectedInteraction: selectedInteraction
+      }
+
       console.log('[ChatPanel] CALLING aiAPI.chat with query:', msg)
-      const res = await aiAPI.chat({ query: msg, session_id: 'default_session' })
+      const res = await aiAPI.chat({ 
+        query: msg, 
+        session_id: 'default_session',
+        hcp_id: formData.hcpId || null,
+        context: contextPayload 
+      })
       const aiResponse = res.data?.response || 'No response received from agent.'
       console.log('[ChatPanel] RESPONSE RECEIVED:', aiResponse)
 
