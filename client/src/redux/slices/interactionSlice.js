@@ -184,6 +184,10 @@ const interactionSlice = createSlice({
     clearSubmitSuccess(state) {
       state.submitSuccess = false
     },
+    deleteInteraction(state, action) {
+      state.interactions = state.interactions.filter(i => i.id !== action.payload)
+      state.pagination.total = state.interactions.length
+    },
   },
 })
 
@@ -200,6 +204,7 @@ export const {
   setLoading,
   setError,
   clearSubmitSuccess,
+  deleteInteraction,
 } = interactionSlice.actions
 
 export default interactionSlice.reducer

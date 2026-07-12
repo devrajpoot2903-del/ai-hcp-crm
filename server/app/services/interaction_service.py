@@ -88,6 +88,5 @@ class InteractionService:
 
     @staticmethod
     def delete_interaction(interaction_id: str) -> None:
-        if interaction_id not in _interactions:
-            raise HTTPException(status_code=404, detail="Interaction not found")
-        del _interactions[interaction_id]
+        if interaction_id in _interactions:
+            del _interactions[interaction_id]

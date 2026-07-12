@@ -1,13 +1,15 @@
 import { useState, useMemo } from 'react'
 import useAppSelector from '../../hooks/useAppSelector'
 import useAppDispatch from '../../hooks/useAppDispatch'
-import { setFilters, clearFilters, setPage, setSelectedInteraction } from '../../redux/slices/interactionSlice'
+import { setFilters, clearFilters, setPage, setSelectedInteraction, deleteInteraction } from '../../redux/slices/interactionSlice'
 import { openModal, addToast } from '../../redux/slices/uiSlice'
+import { setStats, setRecentActivity } from '../../redux/slices/dashboardSlice'
 import { OutcomeBadge, PriorityBadge, StatusBadge, TypeBadge } from '../ui/Badge'
 import EmptyState from '../ui/EmptyState'
 import Modal from '../ui/Modal'
 import { SearchIcon, FilterIcon, EyeIcon, TrashIcon, ChevronLeft, ChevronRight, XIcon, DownloadIcon } from '../ui/Icons'
 import { useNavigate } from 'react-router-dom'
+import interactionAPI from '../../services/api/interactionAPI'
 
 const COLUMNS = ['Date', 'HCP', 'Type', 'Topic', 'Priority', 'Status', 'Outcome', 'Actions']
 
@@ -117,7 +119,9 @@ export default function InteractionTable({ compact = false }) {
   const dispatch   = useAppDispatch()
   const navigate   = useNavigate()
   const { interactions, filters, pagination } = useAppSelector(s => s.interaction)
+  const { stats, recentActivity } = useAppSelector(s => s.dashboard)
   const [viewItem, setViewItem] = useState(null)
+  const [deleteItem, setDeleteItem] = useState(null)
 
   const onFilter = (patch) => dispatch(setFilters(patch))
   const onClear  = () => dispatch(clearFilters())
@@ -148,7 +152,47 @@ export default function InteractionTable({ compact = false }) {
   }
 
   const handleDelete = (item) => {
-    dispatch(addToast({ type: 'info', message: `Delete feature will be wired to the backend API.` }))
+    setDeleteItem(item)
+  }
+
+  const executeDelete = async (item) => {
+    try {
+      await interactionAPI.remove(item.id)
+      dispatch(deleteInteraction(item.id))
+
+      // Update dashboard statistics
+      const todayStr = new Date().toISOString().split('T')[0]
+      const updatedStats = {
+        ...stats,
+        todayInteractions: item.date === todayStr && stats.todayInteractions > 0
+          ? stats.todayInteractions - 1
+          : stats.todayInteractions,
+        pendingFollowUps: (item.status === 'Pending' || item.followUpRequired) && stats.pendingFollowUps > 0
+          ? stats.pendingFollowUps - 1
+          : stats.pendingFollowUps,
+        thisWeekMeetings: item.interactionType === 'Meeting' && stats.thisWeekMeetings > 0
+          ? stats.thisWeekMeetings - 1
+          : stats.thisWeekMeetings,
+      }
+      dispatch(setStats(updatedStats))
+
+      // Remove from dashboard recent activity list
+      const updatedActivity = recentActivity.filter(act => {
+        if (act.id === item.id) return false
+        if (act.topic === item.topic && act.hcp === item.hcpName) return false
+        return true
+      })
+      dispatch(setRecentActivity(updatedActivity))
+
+      dispatch(addToast({ type: 'success', message: 'Interaction deleted successfully.' }))
+    } catch (err) {
+      dispatch(addToast({
+        type: 'error',
+        message: err.response?.data?.detail || 'Failed to delete interaction. Please try again.'
+      }))
+    } finally {
+      setDeleteItem(null)
+    }
   }
 
   return (
@@ -283,6 +327,19 @@ export default function InteractionTable({ compact = false }) {
 
       {/* View detail modal */}
       {viewItem && <ViewModal interaction={viewItem} onClose={() => setViewItem(null)} />}
+
+      {/* Delete confirmation modal */}
+      {deleteItem && (
+        <Modal
+          title="Confirm Delete"
+          confirmLabel="Delete"
+          confirmVariant="danger"
+          onConfirm={() => executeDelete(deleteItem)}
+          onClose={() => setDeleteItem(null)}
+        >
+          <p className="text-sm text-gray-600">Are you sure you want to delete this interaction?</p>
+        </Modal>
+      )}
     </div>
   )
 }
