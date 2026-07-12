@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { BotIcon, SendIcon, SparklesIcon, XIcon, RefreshIcon } from '../ui/Icons'
 import { Spinner } from '../ui/Loader'
+import aiAPI from '../../services/api/aiAPI'
 
 const SUGGESTIONS = [
   { id: 'summarize',    label: '✦ Summarize Interaction',   prompt: 'Please summarize this interaction for me.'                  },
@@ -63,7 +64,7 @@ export default function ChatPanel() {
 
   const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-  const sendMessage = (text) => {
+  const sendMessage = async (text) => {
     const msg = text || input.trim()
     if (!msg || loading) return
 
@@ -74,16 +75,29 @@ export default function ChatPanel() {
     setInput('')
     setLoading(true)
 
-    // Placeholder — replace with aiAPI.chat({ query: msg }) when backend is ready
-    setTimeout(() => {
-      const aiResponse = `[AI Placeholder] Your query: "${msg}"\n\nThis response will come from the LangGraph HCP CRM agent via the FastAPI backend. Connect the Groq API key and the agent will generate intelligent, context-aware responses here.`
+    console.log('[ChatPanel] ENTER sendMessage — query:', msg)
+
+    try {
+      console.log('[ChatPanel] CALLING aiAPI.chat with query:', msg)
+      const res = await aiAPI.chat({ query: msg, session_id: 'default_session' })
+      const aiResponse = res.data?.response || 'No response received from agent.'
+      console.log('[ChatPanel] RESPONSE RECEIVED:', aiResponse)
+
       setMessages(prev => [
         ...prev.slice(0, -1),
         { id: Date.now(), role: 'assistant', content: aiResponse, timestamp: now() },
       ])
+    } catch (err) {
+      console.error('[ChatPanel] ERROR calling AI API:', err)
+      const errMsg = err?.response?.data?.detail || err?.message || 'An error occurred. Please try again.'
+      setMessages(prev => [
+        ...prev.slice(0, -1),
+        { id: Date.now(), role: 'assistant', content: `⚠️ Error: ${errMsg}`, timestamp: now() },
+      ])
+    } finally {
       setLoading(false)
       inputRef.current?.focus()
-    }, 1200)
+    }
   }
 
   const handleKeyDown = (e) => {

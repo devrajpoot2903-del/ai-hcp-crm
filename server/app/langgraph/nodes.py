@@ -24,19 +24,26 @@ def agent_node(state: AgentState):
     """The agent node that invokes the LLM."""
     messages = state["messages"]
     
+
     # Ensure system prompt is present
     if not messages or not isinstance(messages[0], SystemMessage):
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
-        
-    if not settings.GROQ_API_KEY or settings.GROQ_API_KEY == "dummy_key_for_build":
-        # Fallback for when no key is provided
-        return {"messages": [AIMessage(content="[Mock Agent] I am ready! However, the GROQ_API_KEY is not configured yet, so I cannot process complex commands. Please set it in your .env file.")]}
+
+    # Validate API key
+    groq_key = settings.GROQ_API_KEY
+    if not groq_key:
+        return {"messages": [AIMessage(content="Error: GROQ_API_KEY is missing.")]}
+
+    # Handle decommissioned models silently
+    model_name = settings.GROQ_MODEL
+    if model_name == "llama3-70b-8192":
+        model_name = "llama-3.3-70b-versatile"
 
     try:
         # Initialize the model (using ChatGroq)
         llm = ChatGroq(
-            api_key=settings.GROQ_API_KEY,
-            model=settings.GROQ_MODEL
+            api_key=groq_key,
+            model=model_name
         )
         llm_with_tools = llm.bind_tools(tools)
         response = llm_with_tools.invoke(messages)
