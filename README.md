@@ -52,6 +52,39 @@ ai-hcp-crm/
 
 ---
 
+## Features
+
+- AI-powered HCP Assistant (Groq + LangGraph)
+- HCP Interaction Management
+- Dashboard Analytics
+- CRUD Operations
+- Search & Filtering
+- AI Follow-up Email Generator
+- AI Interaction Summarization
+- Action Item Extraction
+- PostgreSQL Database
+- Responsive UI
+
+  
+
+
+
+
+
+## Future Scope
+
+- Authentication
+- Multi-user Support
+- Calendar Integration
+- Notifications
+- Report Export
+- Role Based Access
+
+
+
+
+
+
 ## Installation
 
 ### Prerequisites
